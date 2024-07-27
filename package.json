@@ -3,21 +3,63 @@
   "displayName": "supportQ",
   "description": "simple extension for support my job",
   "version": "0.0.1",
+  "author": "Rizki Juliansyah",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.91.0"
   },
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:dart"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "supportq.helloWorld",
-        "title": "Hello World"
+        "command": "extension.customContextMenu",
+        "title": "Klik Kanan Dalam File"
+      },
+      {
+        "command": "extension.actionForAddPartFile",
+        "title": "Tambah File Part dari File Ini"
+      },
+      {
+        "command": "extension.actionForAddExportFile",
+        "title": "Tambah File Export dari File Ini"
+      },
+      {
+        "command": "extension.actionForDirectory",
+        "title": "Tambah Folder dan File Utama"
       }
-    ]
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "extension.customContextMenu",
+          "when": "resourceLangId == dart && resourceExtname == .dart",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "extension.actionForDirectory",
+          "when": "resourceType == 'folder'",
+          "group": "navigation"
+        },
+        {
+          "command": "extension.actionForAddPartFile",
+          "when": "resourceLangId == dart && resourceExtname == .dart",
+          "group": "navigation"
+        },
+        {
+          "command": "extension.actionForAddExportFile",
+          "when": "resourceLangId == dart && resourceExtname == .dart",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

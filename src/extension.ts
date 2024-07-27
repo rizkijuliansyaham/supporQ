@@ -1,26 +1,111 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
+import * as util from 'util';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
+// Promisify fs.writeFile for better async/await support
+const writeFile = util.promisify(fs.writeFile);
+const readFile = util.promisify(fs.readFile);
+
 export function activate(context: vscode.ExtensionContext) {
+    let disposable = vscode.commands.registerCommand('extension.customContextMenu', (uri: vscode.Uri) => {
+        // This function is triggered when the context menu item is selected
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "supportq" is now active!');
+		
+        // uri is the file that was right-clicked
+        const filePath = uri.fsPath;
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('supportq.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from supportQ!');
-	});
+        // Display an information message
+        vscode.window.showInformationMessage(`Custom action triggered on ${filePath}`);
+        
+        // Add your custom logic here. For example, you can read the file, modify it, etc.
+    });
 
-	context.subscriptions.push(disposable);
+	let actionForAddPartFile = vscode.commands.registerCommand('extension.actionForAddPartFile', async (uri: vscode.Uri) => {
+        // Ensure the selected resource is a file
+        if (uri.scheme !== 'file' || uri.path === '') {
+            vscode.window.showErrorMessage('Please select a file.');
+            return;
+        }
+
+        // Get the directory of the selected file
+        const folderPath = path.dirname(uri.fsPath);
+
+        // Prompt the user for the file name without the extension
+        const fileNameWithoutExtension = await vscode.window.showInputBox({
+            prompt: 'Enter the name of the new file (without extension)',
+            placeHolder: 'filename'
+        });
+
+        if (!fileNameWithoutExtension) {
+            return;
+        }
+
+        // Append the .dart extension
+        const fileName = `${fileNameWithoutExtension}.dart`;
+        const filePath = path.join(folderPath, fileName);
+
+        // Append the .dart extension
+        const newFileName = `${fileNameWithoutExtension}.dart`;
+        const newFilePath = path.join(folderPath, newFileName);
+
+		// Get the clicked file name
+        const clickedFileName = path.basename(uri.fsPath);
+
+        // Define the specific content to be written to the new file
+        const newFileContent = `part of '${clickedFileName}';`;
+
+        // Define the text to be inserted into the clicked file
+        const textToInsert = 'part \'' + newFileName + '\';\n';
+
+        try {
+            // Create the new file with specific content
+            await writeFile(newFilePath, newFileContent);
+            vscode.window.showInformationMessage(`New file created: ${newFilePath}`);
+
+            // Read the existing content of the clicked file
+            const fileContent = await readFile(uri.fsPath, 'utf8');
+            const lines = fileContent.split('\n');
+
+            // Find the index of the line containing 'import package'
+            const importIndex = lines.findIndex(line => line.includes('import'));
+
+            if (importIndex === -1) {
+                vscode.window.showErrorMessage('No line with "import package" found in the clicked file.');
+            } else {
+                // Insert the new text after the import statement
+                lines.splice(importIndex + 1, 0, textToInsert);
+
+                // Join the lines back into a single string
+                const updatedFileContent = lines.join('\n');
+
+                // Write the updated content back to the clicked file
+                await writeFile(uri.fsPath, updatedFileContent);
+                vscode.window.showInformationMessage(`Clicked file updated: ${uri.fsPath}`);
+            }
+
+            // Optionally, open the new file in the editor
+            const document = await vscode.workspace.openTextDocument(newFilePath);
+            vscode.window.showTextDocument(document);
+
+            // Refresh the clicked file in the editor
+            const clickedDoc = await vscode.workspace.openTextDocument(uri.fsPath);
+            vscode.window.showTextDocument(clickedDoc);
+
+        } catch (err) {
+            vscode.window.showErrorMessage(`Failed to create or modify files: ${err}`);
+        }
+    });
+
+   
+	let actionForOtherFile = vscode.commands.registerCommand('extension.actionForDirectory', (uri: vscode.Uri) => {
+        // This function is triggered when the context menu item for non-Dart files is selected
+        const filePath = uri.fsPath;
+        vscode.window.showInformationMessage(`Action for Other File triggered for: ${filePath}`);
+        // Add custom logic for other files here
+    });
+
+    context.subscriptions.push(disposable, actionForAddPartFile, actionForOtherFile);
 }
 
-// This method is called when your extension is deactivated
 export function deactivate() {}
